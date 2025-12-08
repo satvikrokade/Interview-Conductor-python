@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 
 export default function App() {
-  // Always use backend URL (Render)
   const API_BASE = "https://interview-conductor-python.onrender.com";
 
   const [problems, setProblems] = useState([]);
@@ -32,27 +31,21 @@ export default function App() {
   async function fetchProblems() {
     try {
       const res = await fetch(API_BASE + "/problems");
-
-      if (!res.ok) {
-        console.error("Backend returned error:", res.status);
-        return;
-      }
+      if (!res.ok) return console.error("Backend error:", res.status);
 
       const data = await res.json();
 
       const order = { Easy: 0, Medium: 1, Hard: 2 };
-
       data.sort(
         (a, b) =>
-          (order[a.difficulty] || 0) -
-            (order[b.difficulty] || 0) ||
+          (order[a.difficulty] || 0) - (order[b.difficulty] || 0) ||
           a.title.localeCompare(b.title)
       );
 
       setProblems(data);
       if (data.length) setSelected(data[0]);
-    } catch (error) {
-      console.error("Fetch failed:", error);
+    } catch (err) {
+      console.error("Fetch failed:", err);
     }
   }
 
@@ -90,14 +83,13 @@ export default function App() {
     setOutput(null);
 
     try {
-      const resp = await fetch(API_BASE + "/submit", {
+      const res = await fetch(API_BASE + "/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ problem_id: selected.id, code }),
       });
 
-      const data = await resp.json();
-
+      const data = await res.json();
       setOutput(data);
 
       if (data.passed) {
@@ -117,13 +109,11 @@ export default function App() {
     <div className="min-h-screen p-6 bg-auroraBg text-gray-200">
       <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6">
 
-        {/* SIDEBAR */}
         <aside className="col-span-4 card p-4 shadow-xl">
           <h2 className="text-xl font-semibold mb-4 bg-aurora bg-clip-text text-transparent">
             InterviewGPT Problems
           </h2>
 
-          {/* Filters */}
           <div className="flex gap-2 mb-3">
             <select
               className="flex-1 p-2 rounded bg-[#1a1a24] border border-[#2a2a33]"
@@ -146,7 +136,6 @@ export default function App() {
             </select>
           </div>
 
-          {/* Search */}
           <input
             className="w-full p-2 mb-3 rounded bg-[#1a1a24] border border-[#2a2a33]"
             placeholder="Search problems..."
@@ -154,7 +143,6 @@ export default function App() {
             onChange={(e) => setQuery(e.target.value)}
           />
 
-          {/* Problem List */}
           <div className="max-h-[65vh] overflow-y-auto space-y-2">
             {filtered.map((p) => (
               <button
@@ -172,7 +160,6 @@ export default function App() {
           </div>
         </aside>
 
-        {/* MAIN PANEL */}
         <main className="col-span-8 space-y-4">
           <div className="card p-4">
             {selected ? (
@@ -184,11 +171,8 @@ export default function App() {
                 <p className="mt-2 text-sm opacity-80">{selected.description}</p>
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
-
-                  {/* Code Editor */}
                   <div>
                     <label className="text-sm font-semibold">Code Editor</label>
-
                     <textarea
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
@@ -216,15 +200,12 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Output */}
                   <div>
                     <label className="text-sm font-semibold">Output</label>
                     <div className="mt-2 p-3 rounded bg-[#1b1b25] border border-[#2a2a33] min-h-[250px] text-sm overflow-auto">
                       {!output && <p className="opacity-50">Run your code to see output...</p>}
 
-                      {output?.error && (
-                        <pre className="text-red-400">{output.error}</pre>
-                      )}
+                      {output?.error && <pre className="text-red-400">{output.error}</pre>}
 
                       {output?.test_results && (
                         <ul className="space-y-1">
@@ -232,16 +213,13 @@ export default function App() {
                             <li key={i} className={t.ok ? "text-green-400" : "text-red-400"}>
                               {t.ok
                                 ? "Passed"
-                                : `Failed — expected ${JSON.stringify(
-                                    t.expected
-                                  )}, got ${JSON.stringify(t.got)}`}
+                                : `Failed — expected ${JSON.stringify(t.expected)}, got ${JSON.stringify(t.got)}`}
                             </li>
                           ))}
                         </ul>
                       )}
                     </div>
                   </div>
-
                 </div>
               </>
             ) : (
