@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 export default function App() {
-  const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
+  const API_BASE = "https://interview-conductor-python.onrender.com";
 
   const [problems, setProblems] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -46,10 +46,13 @@ export default function App() {
 
   function applyFilters() {
     let out = [...problems];
+
     if (companyFilter !== "All")
       out = out.filter((p) => p.companies?.includes(companyFilter));
+
     if (difficultyFilter !== "All")
       out = out.filter((p) => p.difficulty === difficultyFilter);
+
     if (query.trim())
       out = out.filter(
         (p) =>
@@ -58,6 +61,7 @@ export default function App() {
       );
 
     out.sort((a, b) => (solvedMap[a.id] ? 1 : 0) - (solvedMap[b.id] ? 1 : 0));
+
     setFiltered(out);
   }
 
@@ -96,16 +100,17 @@ export default function App() {
     "All",
     ...new Set(problems.flatMap((p) => p.companies || [])),
   ];
+
   const difficulties = ["All", "Easy", "Medium", "Hard"];
 
   return (
     <div className="min-h-screen p-6 bg-auroraBg text-gray-200">
       <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6">
 
-        {/* Sidebar (Problems) */}
+        {/* Sidebar */}
         <aside className="col-span-4 card p-4 shadow-xl">
           <h2 className="text-xl font-semibold mb-4 bg-aurora bg-clip-text text-transparent">
-            🚀 InterviewGPT Problems
+            InterviewGPT Problems
           </h2>
 
           {/* Filters */}
@@ -157,7 +162,7 @@ export default function App() {
           </div>
         </aside>
 
-        {/* Main Coding Panel */}
+        {/* Main Panel */}
         <main className="col-span-8 space-y-4">
 
           {/* Problem Card */}
@@ -221,7 +226,11 @@ export default function App() {
                               key={i}
                               className={t.ok ? "text-green-400" : "text-red-400"}
                             >
-                              {t.ok ? "✔ Passed" : `✘ Failed — expected ${JSON.stringify(t.expected)}, got ${JSON.stringify(t.got)}`}
+                              {t.ok
+                                ? "Passed"
+                                : `Failed — expected ${JSON.stringify(
+                                    t.expected
+                                  )}, got ${JSON.stringify(t.got)}`}
                             </li>
                           ))}
                         </ul>
