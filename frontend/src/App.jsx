@@ -31,21 +31,22 @@ export default function App() {
   async function fetchProblems() {
     try {
       const res = await fetch(API_BASE + "/problems");
-      if (!res.ok) return console.error("Backend error:", res.status);
+      if (!res.ok) return;
 
       const data = await res.json();
 
       const order = { Easy: 0, Medium: 1, Hard: 2 };
       data.sort(
         (a, b) =>
-          (order[a.difficulty] || 0) - (order[b.difficulty] || 0) ||
+          (order[a.difficulty] || 0) -
+            (order[b.difficulty] || 0) ||
           a.title.localeCompare(b.title)
       );
 
       setProblems(data);
       if (data.length) setSelected(data[0]);
-    } catch (err) {
-      console.error("Fetch failed:", err);
+    } catch (error) {
+      console.error("Fetch failed:", error);
     }
   }
 
@@ -66,7 +67,6 @@ export default function App() {
       );
 
     out.sort((a, b) => (solvedMap[a.id] ? 1 : 0) - (solvedMap[b.id] ? 1 : 0));
-
     setFiltered(out);
   }
 
@@ -78,18 +78,17 @@ export default function App() {
 
   async function runCode() {
     if (!selected) return;
-
     setLoading(true);
     setOutput(null);
 
     try {
-      const res = await fetch(API_BASE + "/submit", {
+      const resp = await fetch(API_BASE + "/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ problem_id: selected.id, code }),
       });
 
-      const data = await res.json();
+      const data = await resp.json();
       setOutput(data);
 
       if (data.passed) {
@@ -106,11 +105,12 @@ export default function App() {
   const difficulties = ["All", "Easy", "Medium", "Hard"];
 
   return (
-    <div className="min-h-screen p-6 bg-auroraBg text-gray-200">
+    <div className="min-h-screen p-6 bg-black text-gray-200">
       <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6">
 
-        <aside className="col-span-4 card p-4 shadow-xl">
-          <h2 className="text-xl font-semibold mb-4 bg-aurora bg-clip-text text-transparent">
+        {/* Sidebar */}
+        <aside className="col-span-4 p-4 bg-[#111] rounded-xl shadow-xl">
+          <h2 className="text-xl font-semibold mb-4 text-purple-400">
             InterviewGPT Problems
           </h2>
 
@@ -149,77 +149,72 @@ export default function App() {
                 key={p.id}
                 onClick={() => pickProblem(p)}
                 className={`w-full p-3 rounded text-left bg-[#1b1b25] hover:bg-[#252533] transition 
-                  ${selected?.id === p.id ? "ring-2 ring-aurora1 bg-[#2d2d3a]" : ""}`}
+                ${selected?.id === p.id ? "ring-2 ring-purple-500 bg-[#2d2d3a]" : ""}`}
               >
                 <div className="font-medium">{p.title}</div>
-                <div className="text-xs opacity-75">
-                  {p.difficulty} • {p.companies?.join(", ")}
-                </div>
+                <div className="text-xs opacity-75">{p.difficulty} • {p.companies?.join(", ")}</div>
               </button>
             ))}
           </div>
         </aside>
 
+        {/* Main Coding Panel */}
         <main className="col-span-8 space-y-4">
-          <div className="card p-4">
+          <div className="p-4 bg-[#111] rounded-xl">
             {selected ? (
               <>
-                <h1 className="text-3xl font-bold bg-aurora bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold text-purple-400">
                   {selected.title}
                 </h1>
 
                 <p className="mt-2 text-sm opacity-80">{selected.description}</p>
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
+
+                  {/* Editor */}
                   <div>
-                    <label className="text-sm font-semibold">Code Editor</label>
+                    <label className="text-sm">Code Editor</label>
                     <textarea
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
                       rows={16}
                       className="w-full mt-2 p-3 rounded bg-[#1b1b25] border border-[#2a2a33] font-mono text-xs"
                     />
-
                     <div className="flex gap-3 mt-3">
                       <button
                         onClick={runCode}
                         disabled={loading}
-                        className="px-4 py-2 rounded bg-aurora hover:opacity-90 text-black font-semibold"
+                        className="px-4 py-2 rounded bg-purple-400 text-black font-semibold"
                       >
                         {loading ? "Running..." : "Run Code"}
                       </button>
-
                       <button
-                        onClick={() =>
-                          setCode(selected.starter_code || selected.signature)
-                        }
-                        className="px-4 py-2 rounded bg-[#252533]"
+                        onClick={() => setCode(selected.starter_code)}
+                        className="px-4 py-2 rounded bg-[#333]"
                       >
                         Reset
                       </button>
                     </div>
                   </div>
 
+                  {/* Output */}
                   <div>
-                    <label className="text-sm font-semibold">Output</label>
+                    <label className="text-sm">Output</label>
                     <div className="mt-2 p-3 rounded bg-[#1b1b25] border border-[#2a2a33] min-h-[250px] text-sm overflow-auto">
                       {!output && <p className="opacity-50">Run your code to see output...</p>}
-
                       {output?.error && <pre className="text-red-400">{output.error}</pre>}
-
                       {output?.test_results && (
                         <ul className="space-y-1">
                           {output.test_results.map((t, i) => (
                             <li key={i} className={t.ok ? "text-green-400" : "text-red-400"}>
-                              {t.ok
-                                ? "Passed"
-                                : `Failed — expected ${JSON.stringify(t.expected)}, got ${JSON.stringify(t.got)}`}
+                              {t.ok ? "✔ Passed" : `✘ Failed — expected ${JSON.stringify(t.expected)}, got ${JSON.stringify(t.got)}`}
                             </li>
                           ))}
                         </ul>
                       )}
                     </div>
                   </div>
+
                 </div>
               </>
             ) : (
