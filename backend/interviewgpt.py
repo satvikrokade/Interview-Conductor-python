@@ -1,32 +1,39 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
 app = FastAPI()
 
-# CRITICAL: CORS must be added BEFORE any routes
+# STEP 1: Add CORS middleware FIRST (before any routes)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://ce7b30a0.interview-conductor-python.pages.dev",
-        "https://d1089335.interview-conductor-python.pages.dev",
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "*"  # Allow all during development
-    ],
+    allow_origins=["*"],  # Allow all origins
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
     expose_headers=["*"],
 )
 
+# STEP 2: Add global OPTIONS handler
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(request: Request, rest_of_path: str):
+    return JSONResponse(
+        content={"status": "ok"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
 # Root endpoint
 @app.get("/")
-def root():
-    return {"status": "running", "message": "InterviewGPT API"}
+async def root():
+    return {"status": "running", "message": "InterviewGPT API is live"}
 
-# Your existing problems data
+# Problems data
 problems = [
     {
         "id": "p1",
@@ -98,15 +105,29 @@ problems = [
 @app.get("/problems")
 async def get_problems():
     """Get all problems"""
-    return problems
+    return JSONResponse(
+        content=problems,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 @app.get("/problems/{problem_id}")
 async def get_problem(problem_id: str):
     """Get specific problem"""
     problem = next((p for p in problems if p["id"] == problem_id), None)
     if not problem:
-        return {"error": "Problem not found"}
-    return problem
+        return JSONResponse(
+            content={"error": "Problem not found"},
+            status_code=404,
+            headers={"Access-Control-Allow-Origin": "*"}
+        )
+    return JSONResponse(
+        content=problem,
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
 
 class CodeSubmission(BaseModel):
     problem_id: str
@@ -118,9 +139,12 @@ async def submit_code(submission: CodeSubmission):
     problem = next((p for p in problems if p["id"] == submission.problem_id), None)
     
     if not problem:
-        return {"success": False, "error": "Problem not found"}
+        return JSONResponse(
+            content={"success": False, "error": "Problem not found"},
+            headers={"Access-Control-Allow-Origin": "*"}
+        )
     
-    # Extract function name from signature
+    # Extract function name
     func_name = problem["signature"].split("(")[0].replace("def ", "").strip()
     
     # Execute user code
@@ -128,33 +152,26 @@ async def submit_code(submission: CodeSubmission):
     try:
         exec(submission.code, namespace)
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Code error: {str(e)}"
-        }
+        return JSONResponse(
+            content={"success": False, "error": f"Code error: {str(e)}"},
+            headers={"Access-Control-Allow-Origin": "*"}
+        )
     
     user_func = namespace.get(func_name)
     if not user_func:
-        return {
-            "success": False,
-            "error": f"Function '{func_name}' not found"
-        }
+        return JSONResponse(
+            content={"success": False, "error": f"Function '{func_name}' not found"},
+            headers={"Access-Control-Allow-Origin": "*"}
+        )
     
-    # Run tests (simplified for your format)
-    return {
-        "success": True,
-        "message": "Code submitted successfully",
-        "problem_id": submission.problem_id
-    }
-
-# Add OPTIONS handler explicitly
-@app.options("/problems")
-async def options_problems():
-    return {"status": "ok"}
-
-@app.options("/submit")
-async def options_submit():
-    return {"status": "ok"}
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": "Code submitted successfully",
+            "problem_id": submission.problem_id
+        },
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
 
 if __name__ == "__main__":
     import uvicorn
