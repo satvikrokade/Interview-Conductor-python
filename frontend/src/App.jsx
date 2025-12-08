@@ -1,6 +1,17 @@
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or your cloudflare pages URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 import React, { useEffect, useState } from "react";
 
 export default function App() {
+  // Always use backend URL (Render)
   const API_BASE = "https://interview-conductor-python.onrender.com";
 
   const [problems, setProblems] = useState([]);
@@ -29,19 +40,30 @@ export default function App() {
   }, [solvedMap]);
 
   async function fetchProblems() {
-    const res = await fetch(API_BASE + "/problems");
-    const data = await res.json();
+    try {
+      const res = await fetch(API_BASE + "/problems");
 
-    const order = { Easy: 0, Medium: 1, Hard: 2 };
-    data.sort(
-      (a, b) =>
-        (order[a.difficulty] || 0) -
-          (order[b.difficulty] || 0) ||
-        a.title.localeCompare(b.title)
-    );
+      if (!res.ok) {
+        console.error("Backend returned error:", res.status);
+        return;
+      }
 
-    setProblems(data);
-    if (data.length) setSelected(data[0]);
+      const data = await res.json();
+
+      const order = { Easy: 0, Medium: 1, Hard: 2 };
+
+      data.sort(
+        (a, b) =>
+          (order[a.difficulty] || 0) -
+            (order[b.difficulty] || 0) ||
+          a.title.localeCompare(b.title)
+      );
+
+      setProblems(data);
+      if (data.length) setSelected(data[0]);
+    } catch (error) {
+      console.error("Fetch failed:", error);
+    }
   }
 
   function applyFilters() {
@@ -73,6 +95,7 @@ export default function App() {
 
   async function runCode() {
     if (!selected) return;
+
     setLoading(true);
     setOutput(null);
 
@@ -84,6 +107,7 @@ export default function App() {
       });
 
       const data = await resp.json();
+
       setOutput(data);
 
       if (data.passed) {
@@ -91,23 +115,19 @@ export default function App() {
       }
     } catch (err) {
       setOutput({ error: String(err) });
-    } finally {
-      setLoading(false);
     }
+
+    setLoading(false);
   }
 
-  const companies = [
-    "All",
-    ...new Set(problems.flatMap((p) => p.companies || [])),
-  ];
-
+  const companies = ["All", ...new Set(problems.flatMap((p) => p.companies || []))];
   const difficulties = ["All", "Easy", "Medium", "Hard"];
 
   return (
     <div className="min-h-screen p-6 bg-auroraBg text-gray-200">
       <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6">
 
-        {/* Sidebar */}
+        {/* SIDEBAR */}
         <aside className="col-span-4 card p-4 shadow-xl">
           <h2 className="text-xl font-semibold mb-4 bg-aurora bg-clip-text text-transparent">
             InterviewGPT Problems
@@ -151,7 +171,7 @@ export default function App() {
                 key={p.id}
                 onClick={() => pickProblem(p)}
                 className={`w-full p-3 rounded text-left bg-[#1b1b25] hover:bg-[#252533] transition 
-                ${selected?.id === p.id ? "ring-2 ring-aurora1 bg-[#2d2d3a]" : ""}`}
+                  ${selected?.id === p.id ? "ring-2 ring-aurora1 bg-[#2d2d3a]" : ""}`}
               >
                 <div className="font-medium">{p.title}</div>
                 <div className="text-xs opacity-75">
@@ -162,10 +182,8 @@ export default function App() {
           </div>
         </aside>
 
-        {/* Main Panel */}
+        {/* MAIN PANEL */}
         <main className="col-span-8 space-y-4">
-
-          {/* Problem Card */}
           <div className="card p-4">
             {selected ? (
               <>
@@ -180,12 +198,13 @@ export default function App() {
                   {/* Code Editor */}
                   <div>
                     <label className="text-sm font-semibold">Code Editor</label>
+
                     <textarea
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
                       rows={16}
                       className="w-full mt-2 p-3 rounded bg-[#1b1b25] border border-[#2a2a33] font-mono text-xs"
-                    ></textarea>
+                    />
 
                     <div className="flex gap-3 mt-3">
                       <button
@@ -207,13 +226,11 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Output Panel */}
+                  {/* Output */}
                   <div>
                     <label className="text-sm font-semibold">Output</label>
                     <div className="mt-2 p-3 rounded bg-[#1b1b25] border border-[#2a2a33] min-h-[250px] text-sm overflow-auto">
-                      {!output && (
-                        <p className="opacity-50">Run your code to see output...</p>
-                      )}
+                      {!output && <p className="opacity-50">Run your code to see output...</p>}
 
                       {output?.error && (
                         <pre className="text-red-400">{output.error}</pre>
@@ -222,10 +239,7 @@ export default function App() {
                       {output?.test_results && (
                         <ul className="space-y-1">
                           {output.test_results.map((t, i) => (
-                            <li
-                              key={i}
-                              className={t.ok ? "text-green-400" : "text-red-400"}
-                            >
+                            <li key={i} className={t.ok ? "text-green-400" : "text-red-400"}>
                               {t.ok
                                 ? "Passed"
                                 : `Failed — expected ${JSON.stringify(
@@ -237,14 +251,15 @@ export default function App() {
                       )}
                     </div>
                   </div>
+
                 </div>
               </>
             ) : (
               <p>Select a problem to start coding.</p>
             )}
           </div>
-
         </main>
+
       </div>
     </div>
   );
